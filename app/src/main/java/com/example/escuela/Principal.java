@@ -5,9 +5,12 @@ import android.icu.util.Output;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -22,6 +25,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import Clases.Alerta;
+import Clases.MyAdapter;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -32,8 +40,6 @@ import okio.ByteString;
 
 public class Principal extends AppCompatActivity {
 
-
-    private TextView output;
     private OkHttpClient client;
 
     WebSocket websocket;
@@ -47,27 +53,39 @@ public class Principal extends AppCompatActivity {
     public RequestQueue queue;
 
     //Url para petición
-    public String UrlLogin="http://192.168.1.71:3333/alertas/ver/alumno2/";
+    public String UrlAlertas="http://192.168.1.71:3333/alertas/ver/alumno2/";
+
+    private List<String> names;
+    private RecyclerView recyclerView;
+    private RecyclerView.Adapter mAdapter;
+    private RecyclerView.LayoutManager mLayoutManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_principal);
 
-
-        output = (TextView) findViewById(R.id.output);
         client = new OkHttpClient();
+
         //Inicializar Request
         queue = Volley.newRequestQueue(this);
 
+        //Recibiendo datos de MainActivity
         aidi=getIntent().getStringExtra("id");
         aidialumno=getIntent().getStringExtra("id_alumno");
 
-
+        //Recycler
+        recyclerView = (RecyclerView)findViewById(R.id.recyclerView);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext(), LinearLayout.VERTICAL,false));
+        VerAlertas();
         start();
+    }
 
-
-
+    private List<String> getNames(){
+        return new ArrayList<String>() {{
+         add("Jaime");
+         add("Emmanuel");
+        }};
     }
 
     private void start() {
@@ -78,14 +96,6 @@ public class Principal extends AppCompatActivity {
         client.dispatcher().executorService().shutdown();
     }
 
-    private void output(final String txt) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                output.setText(output.getText().toString() + "\n\n" + txt);
-            }
-        });
-    }
 
     public void emit(JSONObject data){
         try {
@@ -137,7 +147,6 @@ public class Principal extends AppCompatActivity {
                 switch (type) {
                     case 7: {
                         JSONObject d = object.optJSONObject("d");
-                        output(d.get("data").toString());
                         Log.v("socket: 7", "");
                         VerAlertas();
                     }
@@ -150,32 +159,33 @@ public class Principal extends AppCompatActivity {
         @Override
         public void onClosing(WebSocket webSocket, int code, String reason) {
             webSocket.close(NORMAL_CLOSURE_STATUS, null);
-            output("Closing : " + code + " / " + reason);
         }
 
         @Override
         public void onFailure(WebSocket webSocket, Throwable t, Response response) {
-            output("Error : " + t.getMessage());
         }
     }
 
 
     public void VerAlertas(){
 
-        String finall=UrlLogin+aidialumno;
+        String finall=UrlAlertas+aidialumno;
 
         StringRequest stringRequest = new StringRequest(com.android.volley.Request.Method.GET, finall, new com.android.volley.Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
 
+                //Arreglo de comentarios
+                final ArrayList<Alerta> ListData;
+                ListData = new ArrayList<Alerta>();
+                ListData.clear();
 
                 try {
+
                     String titulo;
                     JSONArray object = new JSONArray(response);
 
                     Log.d(TAG, "onResponse: "+object);
-                    //output(object.toString());
-
 
                     for (int i = 0; i < object.length(); i++) {
 
@@ -183,16 +193,16 @@ public class Principal extends AppCompatActivity {
 
                         String name = item.getString("Titulo");
                         String desc = item.getString("Descripcion");
-                        String txtfinal=name+" "+desc;
-                        output(txtfinal);
+                        ListData.add(new Alerta(name,desc));
+
                     }
 
-                    //JSONObject object = new JSONObject(response);
-                    //aidi=object.getString("_id");
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
 
+                mAdapter = new MyAdapter(ListData);
+                recyclerView.setAdapter(mAdapter);
             }
         }, new com.android.volley.Response.ErrorListener() {
             @Override

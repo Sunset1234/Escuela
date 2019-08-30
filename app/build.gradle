@@ -32,5 +32,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.8.5'
     implementation 'com.github.utsavstha:adonis-websocket-client-android:1.1'
     implementation 'com.squareup.okhttp3:okhttp:4.1.0'
+    implementation 'com.android.support:recyclerview-v7:28.0.0'
+    implementation 'com.android.support:cardview-v7:28.0.0'
 
 }
